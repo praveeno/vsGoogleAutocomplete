@@ -1,7 +1,7 @@
 /**
- * vsGoogleAutocomplete - v0.5.0 - 2015-11-29
+ * vsGoogleAutocomplete - v0.5.0 - 2017-04-11
  * https://github.com/vskosp/vsGoogleAutocomplete
- * Copyright (c) 2015 K.Polishchuk
+ * Copyright (c) 2017 K.Polishchuk
  * License: MIT
  */
 (function (window, document) {
@@ -190,7 +190,7 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			// updates view value and address components on place_changed google api event
 			google.maps.event.addListener(autocomplete, 'place_changed', function() {
 				place = autocomplete.getPlace();
-				viewValue = place.formatted_address || modelCtrl.$viewValue;
+				viewValue = element.val() || place.formatted_address || modelCtrl.$viewValue;
 				scope.$apply(function() {
 					scope.vsPlace = place;
 					autocompleteCtrl.updatePlaceComponents(place);
