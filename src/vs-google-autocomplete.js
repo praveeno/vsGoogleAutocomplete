@@ -141,7 +141,8 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			vsPostCode: '=?',
 			vsLatitude: '=?',
 			vsLongitude: '=?',
-			vsDistrict: '=?'
+			vsDistrict: '=?',
+			onPlaceChange: '&?'
 		},
 		controller: ['$scope', '$attrs', function($scope, $attrs) {
 			this.isolatedScope = $scope;
@@ -162,6 +163,13 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 				$scope.vsLatitude      = !!$attrs.vsLatitude && place     ? vsGooglePlaceUtility.getLatitude(place)     : null;
 				$scope.vsLongitude     = !!$attrs.vsLongitude && place    ? vsGooglePlaceUtility.getLongitude(place)    : null;
 				$scope.vsDistrict      = !!$attrs.vsDistrict && place     ? vsGooglePlaceUtility.getDistrict(place)     : null;
+			};
+
+			this.onPlaceChange = function(place) {
+				// TODO: add more components like streetNumber, City
+				if ($scope.onPlaceChange && (typeof $scope.onPlaceChange == 'function')) {
+					$scope.onPlaceChange({place: place});
+				}
 			};
 		}],
 		link: function(scope, element, attrs, ctrls) {
@@ -188,18 +196,20 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 					autocompleteCtrl.updatePlaceComponents(place);
 					modelCtrl.$setViewValue(viewValue);
 					modelCtrl.$render();
+					autocompleteCtrl.onPlaceChange(place);
 				});
 			});
 
 			// updates view value on focusout
 			element.on('blur', function(event) {
+				/* if user remove, input value, means he want to remove selected place,
+				so instead of again set previously selected address in input value, we 
+				removing selected address also*/
 				if (!modelCtrl.$viewValue) {
-					viewValue = ''
+					viewValue = '';
 					autocompleteCtrl.updatePlaceComponents(null);
 				} else {
-					viewValue = (place && place.formatted_address) 
-						? viewValue 
-						: modelCtrl.$viewValue;
+					viewValue = (place && place.formatted_address) ? viewValue : modelCtrl.$viewValue;
 				}
 				$timeout(function() {
 					scope.$apply(function() {

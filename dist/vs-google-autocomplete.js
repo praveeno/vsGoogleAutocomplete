@@ -1,7 +1,7 @@
 /**
- * vsGoogleAutocomplete - v0.5.0 - 2017-04-11
+ * vsGoogleAutocomplete - v0.5.0 - 2018-07-19
  * https://github.com/vskosp/vsGoogleAutocomplete
- * Copyright (c) 2017 K.Polishchuk
+ * Copyright (c) 2018 K.Polishchuk
  * License: MIT
  */
 (function (window, document) {
@@ -149,7 +149,8 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			vsPostCode: '=?',
 			vsLatitude: '=?',
 			vsLongitude: '=?',
-			vsDistrict: '=?'
+			vsDistrict: '=?',
+			onPlaceChange: '&?'
 		},
 		controller: ['$scope', '$attrs', function($scope, $attrs) {
 			this.isolatedScope = $scope;
@@ -159,17 +160,24 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			 * @param {google.maps.places.PlaceResult} place PlaceResult object
 			 */
 			this.updatePlaceComponents = function(place) {
-				$scope.vsPlaceId       = !!$attrs.vsPlaceId  && place     ? vsGooglePlaceUtility.getPlaceId(place)      : undefined;
-				$scope.vsStreetNumber  = !!$attrs.vsStreetNumber && place ? vsGooglePlaceUtility.getStreetNumber(place) : undefined;
-				$scope.vsStreet        = !!$attrs.vsStreet && place       ? vsGooglePlaceUtility.getStreet(place)       : undefined;
-				$scope.vsCity          = !!$attrs.vsCity && place         ? vsGooglePlaceUtility.getCity(place)         : undefined;
-				$scope.vsPostCode      = !!$attrs.vsPostCode && place     ? vsGooglePlaceUtility.getPostCode(place)     : undefined;
-				$scope.vsState         = !!$attrs.vsState && place        ? vsGooglePlaceUtility.getState(place)        : undefined;
-				$scope.vsCountryShort  = !!$attrs.vsCountryShort && place ? vsGooglePlaceUtility.getCountryShort(place) : undefined;
-				$scope.vsCountry       = !!$attrs.vsCountry && place      ? vsGooglePlaceUtility.getCountry(place)      : undefined;
-				$scope.vsLatitude      = !!$attrs.vsLatitude && place     ? vsGooglePlaceUtility.getLatitude(place)     : undefined;
-				$scope.vsLongitude     = !!$attrs.vsLongitude && place    ? vsGooglePlaceUtility.getLongitude(place)    : undefined;
-				$scope.vsDistrict      = !!$attrs.vsDistrict && place     ? vsGooglePlaceUtility.getDistrict(place)     : undefined;
+				$scope.vsPlaceId       = !!$attrs.vsPlaceId  && place     ? vsGooglePlaceUtility.getPlaceId(place)      : null;
+				$scope.vsStreetNumber  = !!$attrs.vsStreetNumber && place ? vsGooglePlaceUtility.getStreetNumber(place) : null;
+				$scope.vsStreet        = !!$attrs.vsStreet && place       ? vsGooglePlaceUtility.getStreet(place)       : null;
+				$scope.vsCity          = !!$attrs.vsCity && place         ? vsGooglePlaceUtility.getCity(place)         : null;
+				$scope.vsPostCode      = !!$attrs.vsPostCode && place     ? vsGooglePlaceUtility.getPostCode(place)     : null;
+				$scope.vsState         = !!$attrs.vsState && place        ? vsGooglePlaceUtility.getState(place)        : null;
+				$scope.vsCountryShort  = !!$attrs.vsCountryShort && place ? vsGooglePlaceUtility.getCountryShort(place) : null;
+				$scope.vsCountry       = !!$attrs.vsCountry && place      ? vsGooglePlaceUtility.getCountry(place)      : null;
+				$scope.vsLatitude      = !!$attrs.vsLatitude && place     ? vsGooglePlaceUtility.getLatitude(place)     : null;
+				$scope.vsLongitude     = !!$attrs.vsLongitude && place    ? vsGooglePlaceUtility.getLongitude(place)    : null;
+				$scope.vsDistrict      = !!$attrs.vsDistrict && place     ? vsGooglePlaceUtility.getDistrict(place)     : null;
+			};
+
+			this.onPlaceChange = function(place) {
+				// TODO: add more components like streetNumber, City
+				if ($scope.onPlaceChange && (typeof $scope.onPlaceChange == 'function')) {
+					$scope.onPlaceChange({place: place});
+				}
 			};
 		}],
 		link: function(scope, element, attrs, ctrls) {
@@ -190,18 +198,27 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			// updates view value and address components on place_changed google api event
 			google.maps.event.addListener(autocomplete, 'place_changed', function() {
 				place = autocomplete.getPlace();
-				viewValue = element.val() || place.formatted_address || modelCtrl.$viewValue;
+				viewValue = place.formatted_address || modelCtrl.$viewValue;
 				scope.$apply(function() {
 					scope.vsPlace = place;
 					autocompleteCtrl.updatePlaceComponents(place);
 					modelCtrl.$setViewValue(viewValue);
 					modelCtrl.$render();
+					autocompleteCtrl.onPlaceChange(place);
 				});
 			});
 
 			// updates view value on focusout
 			element.on('blur', function(event) {
-				viewValue = (place && place.formatted_address) ? viewValue : modelCtrl.$viewValue;
+				/* if user remove, input value, means he want to remove selected place,
+				so instead of again set previously selected address in input value, we 
+				removing selected address also*/
+				if (!modelCtrl.$viewValue) {
+					viewValue = '';
+					autocompleteCtrl.updatePlaceComponents(null);
+				} else {
+					viewValue = (place && place.formatted_address) ? viewValue : modelCtrl.$viewValue;
+				}
 				$timeout(function() {
 					scope.$apply(function() {
 						modelCtrl.$setViewValue(viewValue);
