@@ -142,7 +142,8 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			vsLatitude: '=?',
 			vsLongitude: '=?',
 			vsDistrict: '=?',
-			onPlaceChange: '&?'
+			onPlaceChange: '&?',
+			vsAddressShow: '@?'
 		},
 		controller: ['$scope', '$attrs', function($scope, $attrs) {
 			this.isolatedScope = $scope;
@@ -190,7 +191,7 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 			// updates view value and address components on place_changed google api event
 			google.maps.event.addListener(autocomplete, 'place_changed', function() {
 				place = autocomplete.getPlace();
-				viewValue = place.formatted_address || modelCtrl.$viewValue;
+				viewValue = getModelAddress(place, scope.vsAddressShow, modelCtrl.$viewValue)
 				scope.$apply(function() {
 					scope.vsPlace = place;
 					autocompleteCtrl.updatePlaceComponents(place);
@@ -209,7 +210,9 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 					viewValue = '';
 					autocompleteCtrl.updatePlaceComponents(null);
 				} else {
-					viewValue = (place && place.formatted_address) ? viewValue : modelCtrl.$viewValue;
+					viewValue = (place && place.formatted_address) 
+						? getModelAddress(place, scope.vsAddressShow, modelCtrl.$viewValue) 
+						: modelCtrl.$viewValue;
 				}
 				$timeout(function() {
 					scope.$apply(function() {
@@ -225,6 +228,37 @@ angular.module('vsGoogleAutocomplete').directive('vsGoogleAutocomplete', ['vsGoo
 					e.preventDefault();
 				}
 			});
+
+			function getModelAddress(location, addressType, inputValue) {
+				var allAddressType = {
+					"formattedAddress": function(_location) {
+						return _location.formatted_address
+					},
+					"addressName": function(_location) {
+						return _location.name
+					},
+					"nearbyAddress": function(_location) {
+						return _location.vicinity
+					}
+				}
+				
+				var address;
+				if (scope.vsAddressShow) {
+					var getAddress = allAddressType[addressType];
+					if (getAddress) {
+						var _address = getAddress(location);
+						address = _address || inputValue;
+					} else {
+						console.error(['not a valid vs-address-show value, valid options are',
+						' 1. "formattedAddress",', '2. "addressName"', '3. "nearbyAddress"',
+						' default is "formattedAddress"'].join(''));
+					}
+				} else {
+					address = location.formatted_address || inputValue;
+				}
+
+				return address
+			}
 		}
 	};
 }]);
